@@ -10,7 +10,7 @@ import google_auth_oauthlib.flow
 import googleapiclient.discovery
 from flask_mysqldb import MySQL
 from decouple import config
-serverdomain = config('serverdomain')
+serverdomain = config('DOMAIN')
 
 tgbottoken = config('TOKEN')
 
