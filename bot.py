@@ -4,7 +4,7 @@ import json
 from decouple import config
 token = config('TOKEN')
 API_KEY = config('API_KEY')
-serverdomain = config('serverdomain')
+serverdomain = config('DOMAIN')
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 TOKEN = token
