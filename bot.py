@@ -1,12 +1,10 @@
-from __future__ import print_function
-from server import main, find
 import requests
 import os
+import json
 from decouple import config
 token = config('TOKEN')
 API_KEY = config('API_KEY')
-
-
+serverdomain = config('serverdomain')
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 TOKEN = token
@@ -26,9 +24,9 @@ def start(update, context):
 def gcalauth(update, context):
     username = update['message']['chat']['username']
     chatid = update['message']['chat']['id']
-    updatee = {"username":username, "chatid":chatid}
-    url = main(updatee)
-    update.message.reply_text(f'visit this url to authorize your google calender {url}')
+
+    authlink = f"{serverdomain}/authorize?username={username}&chatid={chatid}"
+    update.message.reply_text(f'visit this url to authorize your google calender {authlink}')
 
 
 def schedule(update, context):
@@ -37,27 +35,30 @@ def schedule(update, context):
     msg = update['message']['text']
     text = msg.replace('/schedule', '')
 
-    userinfo = find({"username":username})
-    if userinfo == None:
+    url = f"{serverdomain}/getuserinfo"
+    payload = json.dumps({
+        "username": username
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload).json()
+    if response['data'] == None:
         update.message.reply_text('use the /gcalauth to authorize your google calender before using this command')
     else:
-        print(userinfo)
-        token = userinfo['access_token']
-        url = f'https://www.googleapis.com/calendar/v3/calendars/primary/events/quickAdd?text={text}&key={API_KEY}'
-
-        payload = {}
+        url = f"{serverdomain}/setcalender"
+        payload = json.dumps({
+            "username": username,
+            "message": text
+        })
         headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/json'
+            'Content-Type': 'application/json'
         }
-
-        response = requests.request("POST", url, headers=headers, data=payload)
-        responses = response.json()
-        print(responses)
-        response_link = responses['htmlLink']
-        update.message.reply_text(f'Appointment scheduled successfully, follow this link to check the appointment {response_link}')
-
-
+        response = requests.request("GET", url, headers=headers, data=payload).json()
+        print(response)
+        htmlLink = response['htmllink']
+        update.message.reply_text(f'Appointment scheduled successfully, follow this link to check the appointment {htmlLink}')
 
 
 def error(update, context):
@@ -98,4 +99,3 @@ def mainbot():
 
 if __name__ == '__main__':
     mainbot()
-
