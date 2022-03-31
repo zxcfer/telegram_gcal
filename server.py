@@ -51,7 +51,11 @@ def setcalender():
   headers = {
       'Content-Type': 'application/json'
   }
-  response = requests.request("GET", url, headers=headers, data=payload).json()
+  
+  session = requests.Session()
+  session.verify = False
+  
+  response = session.get(url, headers=headers, data=payload).json()
 
   tcred = {
       "token": response['credentials']['token'],
@@ -157,7 +161,11 @@ def oauth2callback():
   headers = {
       'Content-Type': 'application/json'
   }
-  response = requests.request("GET", url, headers=headers, data=payload).json()
+  
+  session = requests.Session()
+  session.verify = False
+
+  response = session.get(url, headers=headers, data=payload).json()
   print(response)
 
   url = f"{serverdomain}/getchatid"
