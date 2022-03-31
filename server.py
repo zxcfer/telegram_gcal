@@ -176,7 +176,10 @@ def oauth2callback():
   headers = {
       'Content-Type': 'application/json'
   }
-  response = requests.request("GET", url, headers=headers, data=payload).json()
+  
+  session = requests.Session()
+  session.verify = False
+  response = session.get(url, headers=headers, data=payload).json()
   print(response)
 
   url = f"https://api.telegram.org/bot{tgbottoken}/sendMessage"
@@ -188,7 +191,7 @@ def oauth2callback():
   headers = {
       'Content-Type': 'application/json'
   }
-  response = requests.request("GET", url, headers=headers, data=payload)
+  response = session.get(url, headers=headers, data=payload)
   print(f'response from telegram bot {response.text}')
   return "Authenticaton flow has been completed, you can close the browser now"
 
