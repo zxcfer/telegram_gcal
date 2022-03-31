@@ -15,10 +15,12 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
+
+session = requests.Session()
+session.verify = False
+
 def start(update, context):
     update.message.reply_text('Hello welcome to google calender bot')
-
-
 
 
 def gcalauth(update, context):
@@ -43,7 +45,7 @@ def schedule(update, context):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("GET", url, headers=headers, data=payload).json()
+    response = session.get(url, headers=headers, data=payload).json()
     if response['data'] == None:
         update.message.reply_text('use the /gcalauth to authorize your google calender before using this command')
     else:
@@ -55,7 +57,7 @@ def schedule(update, context):
         headers = {
             'Content-Type': 'application/json'
         }
-        response = requests.request("GET", url, headers=headers, data=payload).json()
+        response = session.get(url, headers=headers, data=payload).json()
         print(response)
         htmlLink = response['htmllink']
         update.message.reply_text(f'Appointment scheduled successfully, follow this link to check the appointment {htmlLink}')
