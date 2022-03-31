@@ -220,7 +220,7 @@ def addtodb():
 @app.route('/createtable')
 def createtable():
     cursor = mysql.connection.cursor()
-    cursor.execute(f'''CREATE TABLE `calender_db`.`userinfo` ( `state` VARCHAR(1000) NULL , `username` VARCHAR(1000) NULL , `chatId` VARCHAR(1000) NULL , `token` VARCHAR(1000) NULL , `refresh_token` VARCHAR(1000) NULL , `token_uri` VARCHAR(1000) NULL , `client_id` VARCHAR(1000) NULL , `client_secret` VARCHAR(1000) NULL) ENGINE = InnoDB;''')
+    cursor.execute(f'''CREATE TABLE `{db_table}` ( `state` VARCHAR(1000) NULL , `username` VARCHAR(1000) NULL , `chatId` VARCHAR(1000) NULL , `token` VARCHAR(1000) NULL , `refresh_token` VARCHAR(1000) NULL , `token_uri` VARCHAR(1000) NULL , `client_id` VARCHAR(1000) NULL , `client_secret` VARCHAR(1000) NULL) ENGINE = InnoDB;''')
     mysql.connection.commit()
     cursor.close()
     return "The database was created Sucessfully"
