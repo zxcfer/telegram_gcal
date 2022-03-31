@@ -280,5 +280,9 @@ def tgwebhook():
     data = request.get_json()
     print(data)
 
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
 if __name__ == '__main__':
     app.run(debug=True, ssl_context=('cert.pem', 'key.pem'), host='0.0.0.0', port=8080)
