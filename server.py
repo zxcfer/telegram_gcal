@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import flask
 from flask import request
@@ -18,7 +16,9 @@ import json
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
-SCOPES = ["https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/calendar.readonly","https://www.googleapis.com/auth/calendar.events"]
+SCOPES = ["https://www.googleapis.com/auth/calendar",
+		  "https://www.googleapis.com/auth/calendar.readonly",
+		  "https://www.googleapis.com/auth/calendar.events"]
 
 app = flask.Flask(__name__)
 
@@ -116,7 +116,6 @@ def authorize():
   print(response)
 
   return flask.redirect(authorization_url)
-
 
 
 @app.route('/oauth2callback')
@@ -280,7 +279,7 @@ def getchatid():
     data = request.get_json()
     state = data['state']
     cursor = mysql.connection.cursor()
-    cursor.execute(f'''SELECT * FROM {db_table} WHERE state = "{state}"''')
+    cursor.execute(f'SELECT * FROM {db_table} WHERE state = "{state}"')
     data = cursor.fetchone()
     if data == None:
         return {"data":None}

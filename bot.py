@@ -35,7 +35,7 @@ def schedule(update, context):
     print(update)
     username = update['message']['chat']['username']
     msg = update['message']['text']
-    text = msg.replace('/schedule', '')
+    text = msg.replace('/sched', '')
 
     url = f"{serverdomain}/getuserinfo"
     payload = json.dumps({
