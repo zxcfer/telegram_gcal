@@ -35,7 +35,7 @@ def schedule(update, context):
     print(update)
     username = update['message']['chat']['username']
     msg = update['message']['text']
-    text = msg.replace('/sched', '')
+    text = msg.replace('/sc', '')
 
     url = f"{serverdomain}/getuserinfo"
     payload = json.dumps({
@@ -81,7 +81,7 @@ def mainbot():
 
     dp.add_handler(CommandHandler("gcalauth", gcalauth))
 
-    dp.add_handler(CommandHandler("schedule", schedule))
+    dp.add_handler(CommandHandler("sc", schedule))
 
 
     # log all errors
