@@ -2,12 +2,13 @@ import os
 import flask
 from flask import request
 import requests
-import datetime
-import google.oauth2.credentials
-import google_auth_oauthlib.flow
 import googleapiclient.discovery
 from flask_mysqldb import MySQL
 from decouple import config
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+import pickle, os
+
 serverdomain = config('DOMAIN')
 
 tgbottoken = config('TOKEN')
@@ -19,6 +20,45 @@ CLIENT_SECRETS_FILE = "client_secret.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar",
 		  "https://www.googleapis.com/auth/calendar.readonly",
 		  "https://www.googleapis.com/auth/calendar.events"]
+
+
+credentials = None
+
+def get_flow():
+    flow = InstalledAppFlow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes= SCOPES
+    )
+    return flow
+
+def get_credentials():
+    global credentials
+    # token.pickle stores the user's credentials from previously successful logins
+    if os.path.exists('token.pickle'):
+        print('Loading Credentials From File...')
+        with open('token.pickle', 'rb') as token:
+            credentials = pickle.load(token)
+
+    # If there are no valid credentials available, then either refresh the token or log in.
+    if not credentials or not credentials.valid:
+        if credentials and credentials.expired and credentials.refresh_token:
+            print('Refreshing Access Token...')
+            credentials.refresh(Request())
+        else:
+            print('Fetching New Tokens...')
+            flow = get_flow()
+
+            # flow.run_local_server(port=8080, prompt='consent',
+            #                       authorization_prompt_message='')
+            credentials = flow.credentials
+
+            # Save the credentials for the next run
+            with open('token.pickle', 'wb') as f:
+                print('Saving Credentials for Future Use...')
+                pickle.dump(credentials, f)
+
+    return credentials
+
 
 app = flask.Flask(__name__)
 
@@ -55,19 +95,8 @@ def setcalender():
   session = requests.Session()
   session.verify = False
   
-  response = session.get(url, headers=headers, data=payload).json()
-
-  tcred = {
-      "token": response['credentials']['token'],
-      "refresh_token": response['credentials']['refresh_token'],
-      "token_uri": response['credentials']['token_uri'],
-      "client_id": response['credentials']['client_id'],
-      "client_secret": response['credentials']['client_secret'],
-      "scopes": SCOPES
-  }
-
-  credentials = google.oauth2.credentials.Credentials(
-      **tcred)
+  
+  credentials = get_credentials()
   service = googleapiclient.discovery.build(
       'calendar', 'v3', credentials=credentials)
 
@@ -84,8 +113,7 @@ def authorize():
   chatid = request.args.get('chatid')
 
   # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      CLIENT_SECRETS_FILE, scopes=SCOPES)
+  flow = get_flow()
 
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
 
@@ -123,8 +151,7 @@ def oauth2callback():
   # Specify the state when creating the flow in the callback so that it can
   # verified in the authorization server response.
   state = flask.session['state']
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+  flow = get_flow()
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
 
   # Use the authorization server's response to fetch the OAuth 2.0 tokens.
