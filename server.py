@@ -59,6 +59,13 @@ def get_credentials():
 
     return credentials
 
+def get_calenders():
+    calendar_list = []
+    service = googleapiclient.discovery.build('calendar', 'v3', credentials=get_credentials())
+    calendars = service.calendarList().list().execute()
+    for calendar in calendars['items']:
+        calendar_list.append((calendar['id'],calendar['summary']))
+    return calendar_list
 
 app = flask.Flask(__name__)
 
@@ -97,11 +104,12 @@ def setcalender():
   
   
   credentials = get_credentials()
-  service = googleapiclient.discovery.build(
-      'calendar', 'v3', credentials=credentials)
+  service = googleapiclient.discovery.build('calendar', 'v3', credentials=credentials)
+
+  calenders = get_calenders()
 
   created_event = service.events().quickAdd(
-      calendarId='primary',
+      calendarId=calenders[0][0],
       text=message).execute()
   print(created_event)
   return {"htmllink":created_event['htmlLink'],"data":True}
