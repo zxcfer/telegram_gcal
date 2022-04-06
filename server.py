@@ -50,7 +50,7 @@ def get_credentials():
 
             # flow.run_local_server(port=8080, prompt='consent',
             #                       authorization_prompt_message='')
-            credentials = flow.credentials
+            credentials = get_credentials()
 
             # Save the credentials for the next run
             with open('token.pickle', 'wb') as f:
@@ -169,7 +169,7 @@ def oauth2callback():
   # Store credentials in the session.
   # ACTION ITEM: In a production app, you likely want to save these
   #              credentials in a persistent database instead.
-  credentials = flow.credentials
+  credentials = get_credentials()
   credentials = credentials_to_dict(credentials)
   token = credentials['token']
   refresh_token = credentials['refresh_token']
