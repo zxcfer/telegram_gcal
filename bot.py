@@ -1,13 +1,17 @@
+from unittest.mock import call
+from flask import jsonify
 import requests
 import os
 import json
 from decouple import config
-token = config('TOKEN')
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+
+
 API_KEY = config('API_KEY')
 serverdomain = config('DOMAIN')
 import logging
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-TOKEN = token
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
+TOKEN = config('TOKEN')
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -20,7 +24,9 @@ session = requests.Session()
 session.verify = False
 
 def start(update, context):
+    print(requests.get("https://jsonplaceholder.typicode.com/todos/1").json())
     update.message.reply_text('Hello welcome to google calender bot')
+
 
 
 def gcalauth(update, context):
@@ -32,10 +38,12 @@ def gcalauth(update, context):
 
 
 def schedule(update, context):
-    print(update)
+    print("SCHEDULE")
     username = update['message']['chat']['username']
     msg = update['message']['text']
     text = msg.replace('/sc', '')
+    context.user_data['message'] = text
+    context.user_data['user'] = username
 
     url = f"{serverdomain}/getuserinfo"
     payload = json.dumps({
@@ -45,22 +53,64 @@ def schedule(update, context):
         'Content-Type': 'application/json'
     }
 
-    response = session.get(url, headers=headers, data=payload).json()
+    print("Response Will be here", url, headers)
+    response = requests.get(url, headers=headers, data=payload, timeout=5).json()
+    print("Response", response)
+    
+    
     if response['data'] == None:
+
         update.message.reply_text('use the /gcalauth to authorize your google calender before using this command')
     else:
-        url = f"{serverdomain}/setcalender"
+        url = f"{serverdomain}/getcals"
         payload = json.dumps({
-            "username": username,
-            "message": text
+            "username": username
         })
         headers = {
             'Content-Type': 'application/json'
         }
-        response = session.get(url, headers=headers, data=payload).json()
-        print(response)
-        htmlLink = response['htmllink']
-        update.message.reply_text(f'Appointment scheduled successfully, follow this link to check the appointment {htmlLink}')
+
+        print("Response Will be here to get user cal", url, payload, headers)
+        response = requests.get(url, headers=headers, data=payload, timeout=5).json()
+
+        keyboard = []
+        print("="*100)
+        # print("This respose is from the calendar: ",jsonify(response))
+        print("="*100)
+        for i in response['items']:
+            print(i['id'],"---------",i['summary'])
+            if i['accessRole'] == 'owner':
+                keyboard.append([InlineKeyboardButton(i['summary'], callback_data=i['id'])])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        update.message.reply_text('Select a calendar to add:', reply_markup=reply_markup)
+
+        
+def button(update: Update, context: CallbackContext) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+    query = update.callback_query
+    username = context.user_data['user']
+    text = context.user_data['message']
+    # CallbackQueries need to be answered, even if no notification to the user is needed
+    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+    query.answer()
+    print("\n\n\nThe  big Query:", query)
+    # query.edit_message_text(text=f"Selected option: {query.data} ")
+
+    url = f"{serverdomain}/setcalender"
+    payload = json.dumps({
+        "username": username,
+        "message": text,
+        'calendarId': query.data
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = session.get(url, headers=headers, data=payload, timeout=10).json()
+    print('Passed')
+    htmlLink = response['htmllink']
+    # print("response else", response.text)
+    query.edit_message_text(text=f'Appointment scheduled successfully, follow this link to check the appointment {htmlLink} to ')
 
 
 def error(update, context):
@@ -83,9 +133,11 @@ def mainbot():
 
     dp.add_handler(CommandHandler("sc", schedule))
 
+    dp.add_handler(CallbackQueryHandler(button))
+
 
     # log all errors
-    dp.add_error_handler(error)
+    # dp.add_error_handler(error)
 
     # Start the Bot
     updater.start_polling()

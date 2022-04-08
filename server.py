@@ -1,14 +1,23 @@
 import os
+from re import S
 import flask
-from flask import request
+from flask import request, session, jsonify
 import requests
+from google_auth_oauthlib.flow import InstalledAppFlow
+
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
 import googleapiclient.discovery
 from flask_mysqldb import MySQL
 from decouple import config
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle, os
 
+from apiclient.discovery import build
+
+
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 serverdomain = config('DOMAIN')
 
 tgbottoken = config('TOKEN')
@@ -18,21 +27,19 @@ import json
 CLIENT_SECRETS_FILE = "client_secret.json"
 
 SCOPES = ["https://www.googleapis.com/auth/calendar",
-		  "https://www.googleapis.com/auth/calendar.readonly",
 		  "https://www.googleapis.com/auth/calendar.events"]
-
 
 credentials = None
 
+# get flow
 def get_flow():
-    flow = InstalledAppFlow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
-        scopes= SCOPES
-    )
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
+    flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
     return flow
 
+
+# get credentials
 def get_credentials():
-    global credentials
     # token.pickle stores the user's credentials from previously successful logins
     if os.path.exists('token.pickle'):
         print('Loading Credentials From File...')
@@ -44,28 +51,27 @@ def get_credentials():
         if credentials and credentials.expired and credentials.refresh_token:
             print('Refreshing Access Token...')
             credentials.refresh(Request())
+            save_credentials(credentials, 'token.pickle')
         else:
             print('Fetching New Tokens...')
             flow = get_flow()
 
             # flow.run_local_server(port=8080, prompt='consent',
             #                       authorization_prompt_message='')
-            credentials = get_credentials()
+            credentials = flow.run_local_server(port=8080, prompt='consent', authorization_prompt_message="")
 
             # Save the credentials for the next run
             with open('token.pickle', 'wb') as f:
                 print('Saving Credentials for Future Use...')
                 pickle.dump(credentials, f)
-
     return credentials
 
-def get_calenders():
-    calendar_list = []
-    service = googleapiclient.discovery.build('calendar', 'v3', credentials=get_credentials())
-    calendars = service.calendarList().list().execute()
-    for calendar in calendars['items']:
-        calendar_list.append((calendar['id'],calendar['summary']))
-    return calendar_list
+# save credentials
+def save_credentials(credentials, file_name):
+    with open(file_name, 'wb') as token:
+        pickle.dump(credentials, token)
+
+
 
 app = flask.Flask(__name__)
 
@@ -79,8 +85,10 @@ db_table = config('mysqltable')
 
 mysql = MySQL(app)
 
+
 @app.route('/')
 def index():
+  print(session)
   return "Welcome to Calender Tg"
 
 
@@ -89,6 +97,7 @@ def setcalender():
   data = request.get_json()
   username = data['username']
   message = data['message']
+  calendarId = data['calendarId']
 
   url = f"{serverdomain}/getuserinfo"
 
@@ -102,133 +111,109 @@ def setcalender():
   session = requests.Session()
   session.verify = False
   
-  
-  credentials = get_credentials()
-  service = googleapiclient.discovery.build('calendar', 'v3', credentials=credentials)
+  response = session.get(url, headers=headers, data=payload).json()
 
-  calenders = get_calenders()
+  tcred = {
+      "token": response['credentials']['token'],
+      "refresh_token": response['credentials']['refresh_token'],
+      "token_uri": response['credentials']['token_uri'],
+      "client_id": response['credentials']['client_id'],
+      "client_secret": response['credentials']['client_secret'],
+      "scopes": SCOPES
+  }
+
+  credentials = google.oauth2.credentials.Credentials(
+      **tcred)
+  
+  service = googleapiclient.discovery.build(
+      'calendar', 'v3', credentials=credentials)
 
   created_event = service.events().quickAdd(
-      calendarId=calenders[0][0],
+      calendarId=calendarId,
       text=message).execute()
   print(created_event)
   return {"htmllink":created_event['htmlLink'],"data":True}
 
+# authorize
 
 @app.route('/authorize')
 def authorize():
-  username = request.args.get('username')
-  chatid = request.args.get('chatid')
+    username = request.args.get('username')
+    chatid = request.args.get('chatid')
 
-  # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-  flow = get_flow()
+    # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
+    flow = get_flow()
 
-  flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+    flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
 
-  authorization_url, state = flow.authorization_url(
-      access_type='offline',
-      include_granted_scopes='true')
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true')
 
-  # Store the state so the callback can verify the auth server response.
-  print(state)
-  flask.session['state'] = state
+    # Store the state so the callback can verify the auth server response.
+    print(state)
+    flask.session['username'] = username
+    flask.session['chatid'] = chatid
+    flask.session['state'] = state
 
-  url = f"{serverdomain}/addtodb"
+    # url = f"{serverdomain}/addtodb"
 
-  payload = json.dumps({
-      "state": state,
-      "username": username,
-      "chatid": chatid
-  })
-  headers = {
-      'Content-Type': 'application/json'
-  }
+    # payload = json.dumps({
+    #     "state": state,
+    #     "username": username,
+    #     "chatid": chatid
+    # })
+    # headers = {
+    #     'Content-Type': 'application/json'
+    # }
 
-  session = requests.Session()
-  session.verify = False
-  
-  response = session.get(url, headers=headers, data=payload)
+    # session = requests.Session()
+    # session.verify = False
+    
+    # response = session.get(url, headers=headers, data=payload)
 
-  print(response)
+    # print(response)
 
-  return flask.redirect(authorization_url)
+    return flask.redirect(authorization_url)
 
 
 @app.route('/oauth2callback')
 def oauth2callback():
-  # Specify the state when creating the flow in the callback so that it can
-  # verified in the authorization server response.
-  state = flask.session['state']
-  flow = get_flow()
-  flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+    state = flask.session['state']
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+    flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+    
+    authorization_response = flask.request.url
+    flow.fetch_token(authorization_response=authorization_response)
+    
+    credentials = flow.credentials
+    save_credentials(credentials,'oauth_token.pickle')
+    print("This are those who dice you: ",credentials)
+    print("="*100)
+    print(credentials_to_dict(credentials))
+    print("="*100)
 
-  # Use the authorization server's response to fetch the OAuth 2.0 tokens.
-  authorization_response = flask.request.url
-  flow.fetch_token(authorization_response=authorization_response)
-
-  # Store credentials in the session.
-  # ACTION ITEM: In a production app, you likely want to save these
-  #              credentials in a persistent database instead.
-  credentials = get_credentials()
-  credentials = credentials_to_dict(credentials)
-  token = credentials['token']
-  refresh_token = credentials['refresh_token']
-  token_uri = credentials['token_uri']
-  client_id = credentials['client_id']
-  client_secret = credentials['client_secret']
-  scopes0 = credentials['scopes'][0]
-  scopes1 = credentials['scopes'][1]
-  scopes2 = credentials['scopes'][2]
-
-  url = f"{serverdomain}/updatedb"
-  payload = json.dumps({
-      "state": state,
-      "token":token,
-      "refresh_token":refresh_token,
-      "token_uri":token_uri,
-      "client_id":client_id,
-      "client_secret":client_secret,
-      "scopes0":scopes0,
-      "scopes1":scopes1,
-      "scopes2":scopes2
-  })
-  headers = {
-      'Content-Type': 'application/json'
-  }
-  
-  session = requests.Session()
-  session.verify = False
-
-  response = session.get(url, headers=headers, data=payload).json()
-  print(response)
-
-  url = f"{serverdomain}/getchatid"
-
-  payload = json.dumps({
-      "state": state
-  })
-  headers = {
-      'Content-Type': 'application/json'
-  }
-  
-  session = requests.Session()
-  session.verify = False
-  response = session.get(url, headers=headers, data=payload).json()
-  print(response)
-
-  url = f"https://api.telegram.org/bot{tgbottoken}/sendMessage"
-
-  payload = json.dumps({
-      "chat_id": response['chatid'],
-      "text": "You've sucessfully connected your google calender, you can now use the /schedule command"
-  })
-  headers = {
-      'Content-Type': 'application/json'
-  }
-  response = session.get(url, headers=headers, data=payload)
-  print(f'response from telegram bot {response.text}')
-  return "Authenticaton flow has been completed, you can close the browser now"
-
+    url = f"{serverdomain}/addtodb"
+    
+    payload = json.dumps({
+        "credentials": credentials_to_dict(credentials),
+        "state": state,
+        "username": flask.session['username'],
+        "chatid": flask.session['chatid']
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    
+    session = requests.Session()
+    session.verify = False
+    
+    response = session.get(url, headers=headers, data=payload)
+    
+    print(response)
+    
+    return flask.redirect(f"{serverdomain}/")
 
 
 def credentials_to_dict(credentials):
@@ -240,6 +225,14 @@ def credentials_to_dict(credentials):
           'scopes': credentials.scopes}
 
 
+@app.route('/getcals')
+def get_calendar_list():
+    credentials = pickle.load(open("oauth_token.pickle", "rb"))
+    service = build("calendar", "v3", credentials=credentials)
+    result = service.calendarList().list().execute()
+    return result
+
+
 # This is redirect takes care of saving data to the database
 @app.route('/addtodb')
 def addtodb():
@@ -247,8 +240,13 @@ def addtodb():
     state = data['state']
     username = data['username']
     chatid = data['chatid']
+    token = data['credentials']['token']
+    refresh_token = data['credentials']['refresh_token']
+    token_uri = data['credentials']['token_uri']
+    client_id = data['credentials']['client_id']
+    client_secret = data['credentials']['client_secret']
     cursor = mysql.connection.cursor()
-    cursor.execute(f''' INSERT INTO {db_table} VALUES(%s,%s,%s,%s,%s,%s,%s,%s)''', (state, username, chatid,None,None,None,None,None)),
+    cursor.execute(f''' INSERT INTO {db_table} VALUES(%s,%s,%s,%s,%s,%s,%s,%s)''', (state, username, chatid, token, refresh_token, token_uri, client_id, client_secret)),
     mysql.connection.commit()
     cursor.close()
     return f"Done!!"
@@ -295,7 +293,8 @@ def getdata():
     cursor.execute(f'''SELECT * FROM {db_table} WHERE username = "{username}"''')
     data = cursor.fetchone()
     if data == None:
-        return {"data":None}
+        print("IF DATA", data)
+        return jsonify({"data":None})
     else:
         result = {"data":True,"state":data[0], "username":data[1],"chatid":data[2],"credentials":{
 
@@ -306,7 +305,8 @@ def getdata():
                    "client_secret":data[7]
                 }
         }
-        return result
+        print("ELSE res", result)
+        return jsonify(result)
 
 # This is redirect takes care of getting data from the database
 @app.route('/getchatid')
@@ -329,4 +329,4 @@ def tgwebhook():
     print(data)
 
 if __name__ == '__main__':
-    app.run(debug=True, ssl_context=('cert.pem', 'key.pem'), host='0.0.0.0', port=8080)
+    app.run(debug=True, host='0.0.0.0', port=8080)
