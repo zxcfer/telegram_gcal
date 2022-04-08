@@ -24,7 +24,10 @@ session = requests.Session()
 session.verify = False
 
 def start(update, context):
-    print(requests.get("https://jsonplaceholder.typicode.com/todos/1").json())
+    session = requests.Session()
+    session.verify = False
+    
+    print(session.get("https://jsonplaceholder.typicode.com/todos/1").json())
     update.message.reply_text('Hello welcome to google calender bot')
 
 def gcalauth(update, context):
