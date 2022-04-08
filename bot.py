@@ -27,8 +27,6 @@ def start(update, context):
     print(requests.get("https://jsonplaceholder.typicode.com/todos/1").json())
     update.message.reply_text('Hello welcome to google calender bot')
 
-
-
 def gcalauth(update, context):
     username = update['message']['chat']['username']
     chatid = update['message']['chat']['id']
@@ -54,7 +52,12 @@ def schedule(update, context):
     }
 
     print("Response Will be here", url, headers)
-    response = requests.get(url, headers=headers, data=payload, timeout=5).json()
+    
+    session = requests.Session()
+    session.verify = False
+    
+    # response = session.get(url, headers=headers, data=payload).json()
+    response = session.get(url, headers=headers, data=payload, timeout=5).json()
     print("Response", response)
     
     
@@ -71,7 +74,10 @@ def schedule(update, context):
         }
 
         print("Response Will be here to get user cal", url, payload, headers)
-        response = requests.get(url, headers=headers, data=payload, timeout=5).json()
+        session = requests.Session()
+        session.verify = False
+    
+        response = session.get(url, headers=headers, data=payload, timeout=5).json()
 
         keyboard = []
         print("="*100)
