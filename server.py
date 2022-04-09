@@ -135,46 +135,39 @@ def setcalender():
   return {"htmllink":created_event['htmlLink'],"data":True}
 
 # authorize
-
-@app.route('/authorize')
+@app.route("/authorize")
 def authorize():
-    username = request.args.get('username')
-    chatid = request.args.get('chatid')
+    username = request.args.get("username")
+    chatid = request.args.get("chatid")
+    url = f"{serverdomain}/getuserinfo"
 
-    # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-    flow = get_flow()
+    payload = json.dumps({"username": username})
+    headers = {"Content-Type": "application/json"}
 
-    flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+    session = requests.Session()
+    session.verify = False
 
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true')
+    response = session.get(url, headers=headers, data=payload).json()
 
-    # Store the state so the callback can verify the auth server response.
-    print(state)
-    flask.session['username'] = username
-    flask.session['chatid'] = chatid
-    flask.session['state'] = state
+    if response["data"]==None:
+        # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
+        flow = get_flow()
 
-    # url = f"{serverdomain}/addtodb"
+        flow.redirect_uri = flask.url_for("oauth2callback", _external=True)
 
-    # payload = json.dumps({
-    #     "state": state,
-    #     "username": username,
-    #     "chatid": chatid
-    # })
-    # headers = {
-    #     'Content-Type': 'application/json'
-    # }
+        authorization_url, state = flow.authorization_url(
+            access_type="offline", include_granted_scopes="true"
+        )
 
-    # session = requests.Session()
-    # session.verify = False
-    
-    # response = session.get(url, headers=headers, data=payload)
-
-    # print(response)
-
-    return flask.redirect(authorization_url)
+        # Store the state so the callback can verify the auth server response.
+        print(state)
+        flask.session["username"] = username
+        flask.session["chatid"] = chatid
+        flask.session["state"] = state
+        return flask.redirect(authorization_url)
+    else:
+        print("Already Authorized")
+        return "This user is already authorized!"
 
 
 @app.route('/oauth2callback')
