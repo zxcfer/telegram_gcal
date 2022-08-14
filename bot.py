@@ -66,7 +66,7 @@ def schedule(update, context):
     
     if response['data'] == None:
 
-        update.message.reply_text('use the /gcalauth to authorize your google calender before using this command')
+        update.message.reply_text('use the /auth to authorize your google calender before using this command')
     else:
         url = f"{serverdomain}/getcals"
         payload = json.dumps({
@@ -138,9 +138,11 @@ def mainbot():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
 
-    dp.add_handler(CommandHandler("gcalauth", gcalauth))
+    dp.add_handler(CommandHandler("auth", gcalauth))
 
     dp.add_handler(CommandHandler("sc", schedule))
+
+    dp.add_handler(CommandHandler("schedule", schedule))
 
     dp.add_handler(CallbackQueryHandler(button))
 

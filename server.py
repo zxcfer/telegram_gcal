@@ -322,4 +322,4 @@ def tgwebhook():
     print(data)
 
 if __name__ == '__main__':
-    app.run(debug=True, ssl_context=('cert.pem', 'key.pem'), host='f21.app', port=8080)
+    app.run(debug=True, ssl_context=('cert.pem', 'key.pem'), host='dev.f21.app', port=8080)
