@@ -35,7 +35,7 @@ def gcalauth(update, context):
     chatid = update['message']['chat']['id']
 
     authlink = f"{serverdomain}/authorize?username={username}&chatid={chatid}"
-    update.message.reply_text(f'visit this url to authorize your google calender {authlink}')
+    update.message.reply_text(f'Please visit {authlink} to authorize your Google calender')
 
 
 def schedule(update, context):
@@ -119,8 +119,7 @@ def button(update: Update, context: CallbackContext) -> None:
     print('Passed')
     htmlLink = response['htmllink']
     # print("response else", response.text)
-    query.edit_message_text(text=f'Appointment scheduled successfully, follow this link to check the appointment {htmlLink} to ')
-
+    query.edit_message_text(text=f'Event scheduled successfully {htmlLink}')
 
 def error(update, context):
     """Log Errors caused by Updates."""

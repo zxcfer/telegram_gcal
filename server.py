@@ -56,7 +56,7 @@ def get_credentials():
             print('Fetching New Tokens...')
             flow = get_flow()
 
-            # flow.run_local_server(port=8080, prompt='consent',
+            # flow.run_local_server(port=8080, prompt='consent', approval_prompt='force', access_type='offline',
             #                       authorization_prompt_message='')
             credentials = flow.run_local_server(port=8080, prompt='consent', authorization_prompt_message="")
 
