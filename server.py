@@ -20,8 +20,6 @@ from apiclient.discovery import build
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 serverdomain = config('DOMAIN')
 
-tgbottoken = config('TOKEN')
-
 import json
 
 CLIENT_SECRETS_FILE = "client_secret.json"
