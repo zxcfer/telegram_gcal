@@ -26,9 +26,10 @@ session.verify = False
 def start(update, context):
     session = requests.Session()
     session.verify = False
-    
+    app_name = 'Telegram Scheduler 21'
+    help = 'Please visit https://f21.app/apps/telegram-scheduler/ for more details.'
     print(session.get("https://jsonplaceholder.typicode.com/todos/1").json())
-    update.message.reply_text('Hello welcome to google calender bot')
+    update.message.reply_text(f"Hello and welcome to the {app_name} bot application!\n{help}")
 
 def gcalauth(update, context):
     username = update['message']['chat']['username']
