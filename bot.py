@@ -40,10 +40,13 @@ def gcalauth(update, context):
 
 
 def schedule(update, context):
-    print("SCHEDULE")
+    print("==Start schedule...")
     username = update['message']['chat']['username']
     msg = update['message']['text']
+    
+    text = msg.replace('/schedule', '')
     text = msg.replace('/sc', '')
+    
     context.user_data['message'] = text
     context.user_data['user'] = username
 
@@ -63,10 +66,8 @@ def schedule(update, context):
     # response = session.get(url, headers=headers, data=payload).json()
     response = session.get(url, headers=headers, data=payload, timeout=5).json()
     print("Response", response)
-    
-    
+        
     if response['data'] == None:
-
         update.message.reply_text('use the /auth to authorize your google calendar before using this command')
     else:
         url = f"{serverdomain}/getcals"
@@ -85,12 +86,14 @@ def schedule(update, context):
 
         keyboard = []
         print("="*100)
-        # print("This respose is from the calendar: ",jsonify(response))
+        # print("This respose is from the calendar: ", jsonify(response))
         print("="*100)
+
         for i in response['items']:
             print(i['id'],"---------",i['summary'])
             if i['accessRole'] == 'owner':
                 keyboard.append([InlineKeyboardButton(i['summary'], callback_data=i['id'])])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         update.message.reply_text('Select a calendar to add:', reply_markup=reply_markup)
@@ -101,10 +104,13 @@ def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     username = context.user_data['user']
     text = context.user_data['message']
-    # CallbackQueries need to be answered, even if no notification to the user is needed
-    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+    
+    # CallbackQueries need to be answered, 
+    # even if no notification to the user is needed
+    # Some clients may have trouble otherwise.
+    # See https://core.telegram.org/bots/api#callbackquery
     query.answer()
-    print("\n\n\nThe  big Query:", query)
+    print("\n\n\nThe big Query:", query)
     # query.edit_message_text(text=f"Selected option: {query.data} ")
 
     url = f"{serverdomain}/setcalender"

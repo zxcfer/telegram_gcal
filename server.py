@@ -203,7 +203,6 @@ def oauth2callback():
     response = session.get(url, headers=headers, data=payload)
     
     print(response)
-    
     return flask.redirect(f"{serverdomain}/")
 
 
@@ -252,7 +251,6 @@ def createtable():
     return "The database was created Sucessfully"
 
 
-
 # This is redirect takes care of updating the database
 @app.route('/updatedb')
 def updatedb():
@@ -267,8 +265,6 @@ def updatedb():
 
 
     cursor = mysql.connection.cursor()
-
-
     cursor.execute(f'''UPDATE `{db_table}` SET `token`="{token}",`refresh_token`="{refresh_token}",`token_uri`= "{token_uri}",`client_id`= "{client_id}",`client_secret`= "{client_secret}" WHERE `state` = "{state}"''')
 
     mysql.connection.commit()
