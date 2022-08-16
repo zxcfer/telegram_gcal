@@ -36,7 +36,7 @@ def gcalauth(update, context):
     chatid = update['message']['chat']['id']
 
     authlink = f"{serverdomain}/authorize?username={username}&chatid={chatid}"
-    update.message.reply_text(f'Please visit {authlink} to authorize your Google calender')
+    update.message.reply_text(f'Please visit {authlink} to authorize your Google calendar.')
 
 
 def schedule(update, context):
@@ -67,7 +67,7 @@ def schedule(update, context):
     
     if response['data'] == None:
 
-        update.message.reply_text('use the /auth to authorize your google calender before using this command')
+        update.message.reply_text('use the /auth to authorize your google calendar before using this command')
     else:
         url = f"{serverdomain}/getcals"
         payload = json.dumps({
