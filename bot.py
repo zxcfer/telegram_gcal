@@ -45,7 +45,7 @@ def schedule(update, context):
     msg = update['message']['text']
     
     text = msg.replace('/schedule', '')
-    text = msg.replace('/sc', '')
+    text = msg.replace('/sd', '')
     
     context.user_data['message'] = text
     context.user_data['user'] = username
