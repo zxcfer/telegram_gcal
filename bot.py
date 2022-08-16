@@ -138,8 +138,8 @@ def mainbot():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("auth", gcalauth))
-    dp.add_handler(CommandHandler("sc", schedule))
     dp.add_handler(CommandHandler("schedule", schedule))
+    dp.add_handler(CommandHandler("sc", schedule))
     dp.add_handler(CallbackQueryHandler(button))
 
     # log all errors
