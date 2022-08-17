@@ -44,21 +44,21 @@ def schedule(update, context):
     username = update['message']['chat']['username']
     msg = update['message']['text']
     
+    print(f"==tg_msg: <{msg}>")
+    
     text = msg.replace('/schedule', '')
-    text = msg.replace('/sd', '')
+    text = msg.replace('/sc', '')
+    
+    print(f"==gcal_msg: <{text}>")
     
     context.user_data['message'] = text
     context.user_data['user'] = username
 
     url = f"{serverdomain}/getuserinfo"
-    payload = json.dumps({
-        "username": username
-    })
-    headers = {
-        'Content-Type': 'application/json'
-    }
+    payload = json.dumps({"username": username})
+    headers = {'Content-Type': 'application/json'}
 
-    print("Response Will be here", url, headers)
+    print("Response: ", url, headers)
     
     session = requests.Session()
     session.verify = False
@@ -85,9 +85,7 @@ def schedule(update, context):
         response = session.get(url, headers=headers, data=payload, timeout=5).json()
 
         keyboard = []
-        print("="*100)
         # print("This respose is from the calendar: ", jsonify(response))
-        print("="*100)
 
         for i in response['items']:
             print(i['id'],"---------",i['summary'])
