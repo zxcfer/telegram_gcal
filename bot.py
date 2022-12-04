@@ -47,7 +47,7 @@ def schedule(update, context):
     print(f"==tg_msg: <{msg}>")
     
     text = msg.replace('/schedule', '')
-    text = text.replace('/sc', '')
+    text = text.replace('/sd', '')
     
     print(f"==gcal_msg: <{text}>")
     

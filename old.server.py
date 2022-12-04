@@ -4,7 +4,7 @@ import flask
 from flask import request, session, jsonify, render_template
 import requests
 from google_auth_oauthlib.flow import InstalledAppFlow
-from sqlalchemy.exc import NoResultFound
+
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -19,14 +19,11 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 serverdomain = config('DOMAIN')
 
 import json
-from models import db, Creds
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
-SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/calendar.events',
-          'https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/calendar']
+SCOPES = ["https://www.googleapis.com/auth/calendar",
+          "https://www.googleapis.com/auth/calendar.events"]
 
 credentials = None
 
@@ -78,33 +75,19 @@ def save_credentials(credentials, file_name):
 
 app = flask.Flask(__name__)
 app.secret_key = '-=2=skdksmms xnskwow-w=0reolz>/}W{W:SLW:<SJJEKEPP\eeddeeew'
-app.config['SQLALCHEMY_DATABASE_URI'] = config('DBURL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MYSQL_HOST'] = config('mysqlhost')
+app.config['MYSQL_USER'] = config('mysqluser')
+app.config['MYSQL_PASSWORD'] = config('mysqlpassword')
+app.config['MYSQL_DB'] = config('mysqldb')
+db_table = config('mysqltable')
 
-db.init_app(app)
-
-
-def getuserinfo(username: str):
-    try:
-        cred: Creds = Creds.query.filter_by(username=username).one()
-    except NoResultFound:
-        return
-    result = {
-        "state": cred.state, "username": cred.username, "chatid": cred.chatId,
-        "credentials": {
-            "token": cred.token,
-            "refresh_token": cred.refresh_token,
-            "token_uri": cred.token_uri,
-            "client_id": cred.client_id,
-            "client_secret": cred.client_secret
-        }
-    }
-    return result
+mysql = MySQL(app)
 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    print(session)
+    return "Welcome to Calender Tg"
 
 
 @app.route('/setcalender')
@@ -114,7 +97,19 @@ def setcalender():
     message = data['message']
     calendarId = data['calendarId']
 
-    response = getuserinfo(username)
+    url = f"{serverdomain}/getuserinfo"
+
+    payload = json.dumps({
+        "username": username
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    session = requests.Session()
+    session.verify = False
+
+    response = session.get(url, headers=headers, data=payload).json()
 
     tcred = {
         "token": response['credentials']['token'],
@@ -139,25 +134,38 @@ def setcalender():
 
 
 # authorize
-@app.route("/sign-in-with-google")
-def sign_in_google():
+@app.route("/authorize")
+def authorize():
     username = request.args.get("username")
     chatid = request.args.get("chatid")
-    data = getuserinfo(username)
-    if data is None:
+    url = f"{serverdomain}/getuserinfo"
+
+    payload = json.dumps({"username": username})
+    headers = {"Content-Type": "application/json"}
+
+    session = requests.Session()
+    session.verify = False
+
+    response = session.get(url, headers=headers, data=payload).json()
+
+    if response["data"] == None:
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
         flow = get_flow()
+
+        flow.redirect_uri = flask.url_for("oauth2callback", _external=True)
 
         authorization_url, state = flow.authorization_url(
             access_type="offline", include_granted_scopes="true"
         )
 
         # Store the state so the callback can verify the auth server response.
+        print(state)
         flask.session["username"] = username
         flask.session["chatid"] = chatid
         flask.session["state"] = state
         return flask.redirect(authorization_url)
     else:
+        print("Already Authorized")
         return "This user is already authorized!"
 
 
@@ -195,6 +203,7 @@ def oauth2callback():
 
     response = session.get(url, headers=headers, data=payload)
 
+    print(response)
     return flask.redirect(f"{serverdomain}/")
 
 
@@ -227,27 +236,30 @@ def addtodb():
     token_uri = data['credentials']['token_uri']
     client_id = data['credentials']['client_id']
     client_secret = data['credentials']['client_secret']
-    creds = Creds(
-        state=state,
-        username=username,
-        chatId=chatid,
-        token=token,
-        refresh_token=refresh_token,
-        token_uri=token_uri,
-        client_id=client_id,
-        client_secret=client_secret
-    )
-    db.session.add(creds)
-    db.session.commit()
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        f''' INSERT INTO {db_table} VALUES(%s,%s,%s,%s,%s,%s,%s,%s)''', (
+        state, username, chatid, token, refresh_token, token_uri, client_id,
+        client_secret)),
+    mysql.connection.commit()
+    cursor.close()
     return f"Done!!"
 
 
-@app.route('/authorize')
-def login():
-    username = request.args.get("username")
-    chatid = request.args.get("chatid")
-    return render_template('index.html',
-                           username=username, chatid=chatid)
+@app.route('/createtable')
+def createtable():
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        f'''CREATE TABLE `{db_table}` ( `state` VARCHAR(1000) NULL , `username` VARCHAR(1000) NULL , `chatId` VARCHAR(1000) NULL , `token` VARCHAR(1000) NULL , `refresh_token` VARCHAR(1000) NULL , `token_uri` VARCHAR(1000) NULL , `client_id` VARCHAR(1000) NULL , `client_secret` VARCHAR(1000) NULL) ENGINE = InnoDB;''')
+    mysql.connection.commit()
+    cursor.close()
+    return "The database was created Sucessfully"
+
+
+@app.route('/login')
+def login(username, chatid):
+    texto = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+    return render_template('signin.html', texto=texto)
 
 
 # This is redirect takes care of updating the database
@@ -263,13 +275,13 @@ def updatedb():
         'client_id']  # .replace('https://', '').replace('.apps.googleusercontent.com', '')
     client_secret = data['client_secret']
     print({"client_id": client_id, "client_secret": client_secret})
-    Creds.query.filter_by(state=state).update(
-        dict(token=token,
-             refresh_token=refresh_token,
-             token_uri=token_uri,
-             client_id=client_id,
-             client_secret=client_secret)
-    )
+
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        f'''UPDATE `{db_table}` SET `token`="{token}",`refresh_token`="{refresh_token}",`token_uri`= "{token_uri}",`client_id`= "{client_id}",`client_secret`= "{client_secret}" WHERE `state` = "{state}"''')
+
+    mysql.connection.commit()
+    cursor.close()
     return {"data": True}
 
 
@@ -278,11 +290,27 @@ def updatedb():
 def getdata():
     data = request.get_json()
     username = data['username']
-    result = getuserinfo(username)
-    if result == None:
-        print("IF DATA", result)
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        f'''SELECT * FROM {db_table} WHERE username = "{username}"''')
+    data = cursor.fetchone()
+    if data == None:
+        print("IF DATA", data)
         return jsonify({"data": None})
     else:
+        result = {
+            "data": True,
+            "state": data[0], "username": data[1], "chatid": data[2],
+            "credentials": {
+
+                "token": data[3],
+                "refresh_token": data[4],
+                "token_uri": data[5],
+                "client_id": data[6],
+                "client_secret": data[7]
+            }
+        }
+        print("ELSE res", result)
         return jsonify(result)
 
 
@@ -291,11 +319,14 @@ def getdata():
 def getchatid():
     data = request.get_json()
     state = data['state']
-    try:
-        cred: Creds = Creds.query.filter_by(state=state).one()
-    except NoResultFound:
-        return {'data': None}
-    return {"chatid": cred.chatId}
+    cursor = mysql.connection.cursor()
+    cursor.execute(f'SELECT * FROM {db_table} WHERE state = "{state}"')
+    data = cursor.fetchone()
+    if data == None:
+        return {"data": None}
+    else:
+        result = {"chatid": data[2]}
+        return result
 
 
 @app.route('/5168649663:AAHe5Qq2wx4y3V_3MQ7ci3klc7ZKkTJ8kQM')
@@ -306,6 +337,7 @@ def tgwebhook():
 
 
 if __name__ == '__main__':
-    db.create_all()
     app.run(debug=True,
-            ssl_context='sasasa', host='localhost')
+            ssl_context=('cert.pem', 'key.pem'),
+            host='scheduler.f21.app',
+            port=8080)
