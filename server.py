@@ -19,7 +19,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 serverdomain = config('DOMAIN')
 
 import json
-from models import db, Creds
+from models import db
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
@@ -82,14 +82,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = config('DBURL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+from models import Creds
 
 
 def getuserinfo(username: str):
     try:
         cred: Creds = Creds.query.filter_by(username=username).one()
     except NoResultFound:
-        return
+        return {'data': None}
     result = {
+        'data': True,
         "state": cred.state, "username": cred.username, "chatid": cred.chatId,
         "credentials": {
             "token": cred.token,
@@ -144,7 +146,7 @@ def sign_in_google():
     username = request.args.get("username")
     chatid = request.args.get("chatid")
     data = getuserinfo(username)
-    if data is None:
+    if data['data'] is None:
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
         flow = get_flow()
 
@@ -279,7 +281,7 @@ def getdata():
     data = request.get_json()
     username = data['username']
     result = getuserinfo(username)
-    if result == None:
+    if result['data'] == None:
         print("IF DATA", result)
         return jsonify({"data": None})
     else:
@@ -306,6 +308,5 @@ def tgwebhook():
 
 
 if __name__ == '__main__':
-    db.create_all()
     app.run(debug=True,
             ssl_context='sasasa', host='localhost')
