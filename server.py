@@ -78,7 +78,7 @@ def save_credentials(credentials, file_name):
 
 app = flask.Flask(__name__)
 app.secret_key = '-=2=skdksmms xnskwow-w=0reolz>/}W{W:SLW:<SJJEKEPP\eeddeeew'
-app.config['SQLALCHEMY_DATABASE_URI'] = config('DBURL')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://fermovies:@localhost/fermovies'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)

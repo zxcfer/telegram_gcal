@@ -4,8 +4,25 @@
     <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com">
     <script src="https://apis.google.com/js/platform.js" async defer></script>
   </head>
+    <style>
+        .center-elements{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    
+    </style>
   <body>
-    <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
+  
+  
+	<div class="center-elements">
+	    <img src="logo.png" />
+	    <div>
+	        Invoice from One Medical
+	    </div>
+	</div>
+	
+	    <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
     <script>
       function onSignIn(googleUser) {
         // Useful data for your client-side scripts:
