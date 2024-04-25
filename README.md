@@ -17,4 +17,4 @@ setup webhook
 https://api.telegram.org/bot[TU_TOKEN]/setWebhook?url=https://[TU_DOMINIO]/[CAMINO_AL_WEBHOOK]
 ```
 
-https://api.telegram.org/bot5758197113:AAHH4J_2fdZi88TtfMYFK3kxxxA2f7-2v2M/setWebhook?url=https://scheduler.f21.app/
+https://api.telegram.org/bot[TOKEN]/setWebhook?url=https://scheduler.f21.app/
